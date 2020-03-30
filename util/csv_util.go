@@ -90,6 +90,7 @@ func (c *Csv) ParseCsv() (err error) {
 }
 
 func (c *Csv) importRedis(shopList []int) (err error) {
+	log.Printf("length : %d", len(shopList))
 	for _, v := range shopList {
 		if err := c.redisConn.Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
 			log.Errorf("pipeline error : %v\n", err)
@@ -104,7 +105,6 @@ func (c *Csv) importRedis(shopList []int) (err error) {
 }
 
 func (c *Csv) receive(conn redis.Conn, length int) {
-	log.Printf("length : %d", length)
 	for i := 0; i < length; i++ {
 		_, err := conn.Receive()
 		if err != nil {

@@ -35,7 +35,7 @@ func main() {
 	}
 
 	redisHost := flag.String("host", "127.0.0.1", "redis host")
-	importLimit := flag.Int("limit", 10000, "Max concurrent import to redis")
+	importLimit := flag.Int("limit", 30000, "Max concurrent import to redis")
 	redisPort := flag.Int("port", 6379, "redis port")
 	csvInFile := flag.String("in", "", "input filename to import")
 	flag.Parse()
@@ -57,6 +57,7 @@ func main() {
 
 	start := time.Now()
 	//redisPool, err = util.InitRedisConnection(cfg)
+	log.Infof("Target redis host : %s", cfg.RedisConfig.Host)
 	redisConn, err := redis.Dial("tcp", cfg.RedisConfig.Host)
 	if err != nil {
 		log.Fatal(err)
