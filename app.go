@@ -19,7 +19,7 @@ var (
 
 func main() {
 	err = log.SetConfig(&log.Config{
-		Level:   "info",
+		//Level:   "info",
 		AppName: "Redis Toolkit",
 	})
 	if err != nil {
@@ -56,10 +56,17 @@ func main() {
 	}
 
 	start := time.Now()
-	redisPool, err = util.InitRedisConnection(cfg)
-	csvUtil := util.NewCsv(cfg, redisPool, redisImportLimit)
+	//redisPool, err = util.InitRedisConnection(cfg)
+	redisConn, err := redis.Dial("tcp", cfg.RedisConfig.Host)
+	if err != nil {
+		log.Fatal(err)
+	}
+	csvUtil := util.NewCsv(cfg, redisConn, redisImportLimit)
 	err = csvUtil.ParseCsv()
+	if err != nil {
+		log.Errorf("parse error : %v\n", err)
+	}
 
 	t := time.Since(start)
-	fmt.Printf("import completed in %f seconds\n", float64(t)/float64(time.Second))
+	log.Printf("import completed in %f seconds\n", float64(t)/float64(time.Second))
 }

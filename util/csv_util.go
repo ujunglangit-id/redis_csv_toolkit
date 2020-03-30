@@ -15,15 +15,15 @@ import (
 //Csv is struct
 type Csv struct {
 	cfg            *Config
-	redisPool      *redis.Pool
+	redisConn      redis.Conn
 	concurentLimit int
 }
 
 //NewCsv is method
-func NewCsv(config *Config, pool *redis.Pool, limit int) *Csv {
+func NewCsv(config *Config, conn redis.Conn, limit int) *Csv {
 	return &Csv{
 		cfg:            config,
-		redisPool:      pool,
+		redisConn:      conn,
 		concurentLimit: limit,
 	}
 }
@@ -40,6 +40,7 @@ func (c *Csv) OpenFile(file, fileType string) (*os.File, error) {
 }
 
 func (c *Csv) ParseCsv() (err error) {
+	var lineCount int
 	var fileName = c.cfg.AppConfig.FileName
 	shopList := []int{}
 	isEOF := false
@@ -58,16 +59,23 @@ func (c *Csv) ParseCsv() (err error) {
 			record, err := reader.Read()
 			if err == io.EOF {
 				isEOF = true
-				break
+				//break
 			} else if err != nil {
 				return err
 			}
-
-			shopID, err := strconv.Atoi(record[0])
-			shopList = append(shopList, shopID)
+			if !isEOF {
+				shopID, err := strconv.Atoi(record[0])
+				if err != nil {
+					log.Errorf("invalid shop id : %v\n", err)
+				} else {
+					lineCount++
+					shopList = append(shopList, shopID)
+				}
+			}
 		}
 
 		if len(shopList) >= c.concurentLimit || isEOF {
+			log.Infof("execute pipeline import\n")
 			err = c.importRedis(shopList)
 			if err != nil {
 				log.Errorf("error import redis ")
@@ -76,24 +84,27 @@ func (c *Csv) ParseCsv() (err error) {
 		}
 	}
 
+	log.Infof("total shop ID %d\n", lineCount)
+
 	return
 }
 
 func (c *Csv) importRedis(shopList []int) (err error) {
+	log.Printf("list length : %d\n", len(shopList))
 	for _, v := range shopList {
-		if err := c.redisPool.Get().Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
-			log.Fatal(err)
+		if err := c.redisConn.Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
+			log.Errorf("pipeline error : %v\n", err)
 		}
 	}
-	if err := c.redisPool.Get().Flush(); err != nil {
-		log.Fatal(err)
+	if err := c.redisConn.Flush(); err != nil {
+		log.Errorf("flush error : %v\n", err)
 	}
 
 	go func() {
 		for i := 0; i < len(shopList); i++ {
-			_, err := c.redisPool.Get().Receive()
+			_, err := c.redisConn.Receive()
 			if err != nil {
-				log.Fatal(err)
+				log.Errorf("pipeline receive error : %v\n", err)
 			}
 		}
 	}()
