@@ -19,7 +19,7 @@ var (
 
 func main() {
 	err = log.SetConfig(&log.Config{
-		//Level:   "info",
+		Level:   "debug",
 		AppName: "Redis Toolkit",
 	})
 	if err != nil {
@@ -68,5 +68,6 @@ func main() {
 	}
 
 	t := time.Since(start)
-	log.Printf("import completed in %f seconds\n", float64(t)/float64(time.Second))
+	log.Printf("import completed in %f seconds", float64(t)/float64(time.Second))
+	fmt.Println("")
 }

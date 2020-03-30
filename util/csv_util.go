@@ -75,7 +75,7 @@ func (c *Csv) ParseCsv() (err error) {
 		}
 
 		if len(shopList) >= c.concurentLimit || isEOF {
-			log.Infof("execute pipeline import\n")
+			log.Infof("execute pipeline import")
 			err = c.importRedis(shopList)
 			if err != nil {
 				log.Errorf("error import redis ")
@@ -84,13 +84,12 @@ func (c *Csv) ParseCsv() (err error) {
 		}
 	}
 
-	log.Infof("total shop ID %d\n", lineCount)
+	log.Infof("total shop ID %d", lineCount)
 
 	return
 }
 
 func (c *Csv) importRedis(shopList []int) (err error) {
-	log.Printf("list length : %d\n", len(shopList))
 	for _, v := range shopList {
 		if err := c.redisConn.Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
 			log.Errorf("pipeline error : %v\n", err)
@@ -100,13 +99,17 @@ func (c *Csv) importRedis(shopList []int) (err error) {
 		log.Errorf("flush error : %v\n", err)
 	}
 
-	go func() {
-		for i := 0; i < len(shopList); i++ {
-			_, err := c.redisConn.Receive()
-			if err != nil {
-				log.Errorf("pipeline receive error : %v\n", err)
-			}
-		}
-	}()
+	go c.receive(c.redisConn, len(shopList))
 	return
+}
+
+func (c *Csv) receive(conn redis.Conn, length int) {
+	log.Printf("length : %d", length)
+	for i := 0; i < length; i++ {
+		_, err := conn.Receive()
+		if err != nil {
+			log.Errorf("pipeline receive error : %v\n", err)
+			break
+		}
+	}
 }
