@@ -7,15 +7,17 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/tokopedia/tdk/go/log"
 	"os"
+	"time"
 )
 
 var (
-	cfg       *util.Config
-	redisPool *redis.Pool
-	err       error
+	cfg              *util.Config
+	redisPool        *redis.Pool
+	err              error
+	redisImportLimit = 1000
 )
 
-func init() {
+func main() {
 	err = log.SetConfig(&log.Config{
 		Level:   "info",
 		AppName: "Redis Toolkit",
@@ -33,6 +35,7 @@ func init() {
 	}
 
 	redisHost := flag.String("host", "127.0.0.1", "redis host")
+	importLimit := flag.Int("limit", 10000, "Max concurrent import to redis")
 	redisPort := flag.Int("port", 6379, "redis port")
 	csvInFile := flag.String("in", "", "input filename to import")
 	flag.Parse()
@@ -48,9 +51,15 @@ func init() {
 		os.Exit(0)
 	}
 
-	redisPool, err = util.InitRedisConnection(cfg)
-}
+	if *importLimit > 0 {
+		redisImportLimit = *importLimit
+	}
 
-func main() {
-	log.Infof("ihik ihik ...")
+	start := time.Now()
+	redisPool, err = util.InitRedisConnection(cfg)
+	csvUtil := util.NewCsv(cfg, redisPool, redisImportLimit)
+	err = csvUtil.ParseCsv()
+
+	t := time.Since(start)
+	fmt.Printf("import completed in %f seconds\n", float64(t)/float64(time.Second))
 }
