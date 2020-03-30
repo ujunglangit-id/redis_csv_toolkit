@@ -4,7 +4,7 @@
 
 ### command
 ```bash
-./redis_csv_toolkit --in=shop_id.csv --limit=400000 --host=127.0.0.1 --port=6379
+go build && ./redis_csv_toolkit --in=shop_id.csv --limit=400000 --host=127.0.0.1 --port=6379
 ```
   
 - --in : input filename (mandatory)
