@@ -39,7 +39,7 @@ func (c *Csv) OpenFile(file, fileType string) (*os.File, error) {
 	return nil, errors.New("[Migration][OpenFile] wrong fileType")
 }
 
-func (c *Csv) ParseCsv() (err error) {
+func (c *Csv) ParseCsv(isTemporary bool, keyTtl int) (err error) {
 	var lineCount int
 	var fileName = c.cfg.AppConfig.FileName
 	shopList := []int{}
@@ -76,7 +76,7 @@ func (c *Csv) ParseCsv() (err error) {
 
 		if len(shopList) >= c.concurentLimit || isEOF {
 			log.Infof("execute pipeline import")
-			err = c.importRedis(shopList)
+			err = c.importRedis(shopList, isTemporary, keyTtl)
 			if err != nil {
 				log.Errorf("error import redis ")
 			}
@@ -89,11 +89,17 @@ func (c *Csv) ParseCsv() (err error) {
 	return
 }
 
-func (c *Csv) importRedis(shopList []int) (err error) {
+func (c *Csv) importRedis(shopList []int, isTemporary bool, keyTtl int) (err error) {
 	log.Printf("length : %d", len(shopList))
 	for _, v := range shopList {
-		if err := c.redisConn.Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
-			log.Errorf("pipeline error : %v\n", err)
+		if isTemporary {
+			if err := c.redisConn.Send("SETEX", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), keyTtl, 1); err != nil {
+				log.Errorf("pipeline error : %v\n", err)
+			}
+		} else {
+			if err := c.redisConn.Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
+				log.Errorf("pipeline error : %v\n", err)
+			}
 		}
 	}
 	if err := c.redisConn.Flush(); err != nil {

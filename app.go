@@ -15,6 +15,7 @@ var (
 	redisPool        *redis.Pool
 	err              error
 	redisImportLimit = 1000
+	isTemporaryKey   bool
 )
 
 func main() {
@@ -34,10 +35,11 @@ func main() {
 		log.Infof("[Init][Configuration] file loaded successfully")
 	}
 
-	redisHost := flag.String("host", "127.0.0.1", "redis host")
+	redisHost := flag.String("host", "", "redis host")
 	importLimit := flag.Int("limit", 30000, "Max concurrent import to redis")
-	redisPort := flag.Int("port", 6379, "redis port")
+	redisPort := flag.Int("port", 0, "redis port")
 	csvInFile := flag.String("in", "", "input filename to import")
+	ttl := flag.Int("ttl", 0, "redis key expiration time (seconds)")
 	flag.Parse()
 
 	if *redisHost != "" && *redisPort > 0 {
@@ -55,19 +57,21 @@ func main() {
 		redisImportLimit = *importLimit
 	}
 
+	if *ttl > 0 {
+		isTemporaryKey = true
+	}
+
 	start := time.Now()
-	//redisPool, err = util.InitRedisConnection(cfg)
 	log.Infof("Target redis host : %s", cfg.RedisConfig.Host)
 	redisConn, err := redis.Dial("tcp", cfg.RedisConfig.Host)
 	if err != nil {
 		log.Fatal(err)
 	}
 	csvUtil := util.NewCsv(cfg, redisConn, redisImportLimit)
-	err = csvUtil.ParseCsv()
+	err = csvUtil.ParseCsv(isTemporaryKey, *ttl)
 	if err != nil {
 		log.Errorf("parse error : %v\n", err)
 	}
-
 	t := time.Since(start)
 	log.Printf("import completed in %f seconds", float64(t)/float64(time.Second))
 	fmt.Println("")
