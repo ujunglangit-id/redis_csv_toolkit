@@ -89,24 +89,25 @@ func (c *Csv) ParseCsv(isTemporary bool, keyTtl int) (err error) {
 
 func (c *Csv) importRedis(shopList []int, isTemporary bool, keyTtl int) (err error) {
 	log.Printf("length : %d", len(shopList))
+	conn := c.redisConn
 	for _, v := range shopList {
 		if isTemporary {
-			if err := c.redisConn.Send("SETEX", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), keyTtl, 1); err != nil {
+			if err := conn.Send("SETEX", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), keyTtl, 1); err != nil {
 				log.Errorf("pipeline error : %v", err)
 				log.Println("")
 			}
 		} else {
-			if err := c.redisConn.Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
+			if err := conn.Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
 				log.Errorf("pipeline error : %v", err)
 				log.Println("")
 			}
 		}
 	}
-	if err := c.redisConn.Flush(); err != nil {
+	if err := conn.Flush(); err != nil {
 		log.Errorf("flush error : %v\n", err)
 	}
 
-	go c.receive(c.redisConn, len(shopList))
+	go c.receive(conn, len(shopList))
 	return
 }
 
