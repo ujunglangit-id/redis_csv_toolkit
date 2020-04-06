@@ -40,7 +40,7 @@ func (c *Csv) OpenFile(file, fileType string) (*os.File, error) {
 }
 
 func (c *Csv) ParseCsv(isTemporary bool, keyTtl int) (err error) {
-	var lineCount int
+	var lineCount = 1
 	var fileName = c.cfg.AppConfig.FileName
 	shopList := []int{}
 	isEOF := false
@@ -83,9 +83,7 @@ func (c *Csv) ParseCsv(isTemporary bool, keyTtl int) (err error) {
 			shopList = []int{}
 		}
 	}
-
 	log.Infof("total shop ID %d", lineCount)
-
 	return
 }
 
@@ -94,11 +92,13 @@ func (c *Csv) importRedis(shopList []int, isTemporary bool, keyTtl int) (err err
 	for _, v := range shopList {
 		if isTemporary {
 			if err := c.redisConn.Send("SETEX", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), keyTtl, 1); err != nil {
-				log.Errorf("pipeline error : %v\n", err)
+				log.Errorf("pipeline error : %v", err)
+				log.Println("")
 			}
 		} else {
 			if err := c.redisConn.Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
-				log.Errorf("pipeline error : %v\n", err)
+				log.Errorf("pipeline error : %v", err)
+				log.Println("")
 			}
 		}
 	}
