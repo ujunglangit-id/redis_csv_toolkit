@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/azwarnrst/redis_csv_toolkit/util"
 	"github.com/garyburd/redigo/redis"
-	"github.com/tokopedia/tdk/go/log"
+	"log"
 	"os"
 	"time"
 )
@@ -19,20 +19,12 @@ var (
 )
 
 func main() {
-	err = log.SetConfig(&log.Config{
-		Level:   "debug",
-		AppName: "Redis Toolkit",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// initialize app configuration
 	cfg = util.NewConfig()
 	if err := cfg.ReadConfig(); err != nil {
 		log.Fatalf("[Init][Configuration] %v", err)
 	} else {
-		log.Infof("[Init][Configuration] file loaded successfully")
+		log.Printf("[Init][Configuration] file loaded successfully")
 	}
 
 	redisHost := flag.String("host", "", "redis host")
@@ -49,7 +41,7 @@ func main() {
 	if *csvInFile != "" {
 		cfg.AppConfig.FileName = *csvInFile
 	} else {
-		log.Errorf("no file input specified ...")
+		log.Printf("no file input specified ...")
 		os.Exit(0)
 	}
 
@@ -62,7 +54,7 @@ func main() {
 	}
 
 	start := time.Now()
-	log.Infof("Target redis host : %s", cfg.RedisConfig.Host)
+	log.Printf("Target redis host : %s", cfg.RedisConfig.Host)
 	redisConn, err := redis.Dial("tcp", cfg.RedisConfig.Host)
 	if err != nil {
 		log.Fatal(err)
@@ -70,7 +62,7 @@ func main() {
 	csvUtil := util.NewCsv(cfg, redisConn, redisImportLimit)
 	err = csvUtil.ParseCsv(isTemporaryKey, *ttl)
 	if err != nil {
-		log.Errorf("parse error : %v\n", err)
+		log.Printf("parse error : %v\n", err)
 	}
 	t := time.Since(start)
 	log.Printf("import completed in %f seconds", float64(t)/float64(time.Second))

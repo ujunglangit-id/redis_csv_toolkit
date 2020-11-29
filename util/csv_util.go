@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
-	"github.com/tokopedia/tdk/go/log"
 	"io"
+	"log"
 	"os"
 	"strconv"
 )
@@ -66,7 +66,7 @@ func (c *Csv) ParseCsv(isTemporary bool, keyTtl int) (err error) {
 			if !isEOF {
 				shopID, err := strconv.Atoi(record[0])
 				if err != nil {
-					log.Errorf("invalid shop id : %v\n", err)
+					log.Printf("invalid shop id : %v\n", err)
 				} else {
 					lineCount++
 					shopList = append(shopList, shopID)
@@ -75,15 +75,15 @@ func (c *Csv) ParseCsv(isTemporary bool, keyTtl int) (err error) {
 		}
 
 		if len(shopList) >= c.concurentLimit || isEOF {
-			log.Infof("execute pipeline import")
+			log.Printf("execute pipeline import")
 			err = c.importRedis(shopList, isTemporary, keyTtl)
 			if err != nil {
-				log.Errorf("error import redis ")
+				log.Printf("error import redis ")
 			}
 			shopList = []int{}
 		}
 	}
-	log.Infof("total shop ID %d", lineCount)
+	log.Printf("total shop ID %d", lineCount)
 	return
 }
 
@@ -93,18 +93,18 @@ func (c *Csv) importRedis(shopList []int, isTemporary bool, keyTtl int) (err err
 	for _, v := range shopList {
 		if isTemporary {
 			if err := conn.Send("SETEX", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), keyTtl, 1); err != nil {
-				log.Errorf("pipeline error : %v", err)
+				log.Printf("pipeline error : %v", err)
 				log.Println("")
 			}
 		} else {
 			if err := conn.Send("SET", fmt.Sprintf(c.cfg.AppConfig.KeyFormat, v), 1); err != nil {
-				log.Errorf("pipeline error : %v", err)
+				log.Printf("pipeline error : %v", err)
 				log.Println("")
 			}
 		}
 	}
 	if err := conn.Flush(); err != nil {
-		log.Errorf("flush error : %v\n", err)
+		log.Printf("flush error : %v\n", err)
 	}
 
 	go c.receive(conn, len(shopList))
@@ -115,7 +115,7 @@ func (c *Csv) receive(conn redis.Conn, length int) {
 	for i := 0; i < length; i++ {
 		_, err := conn.Receive()
 		if err != nil {
-			log.Errorf("pipeline receive error : %v\n", err)
+			log.Printf("pipeline receive error : %v\n", err)
 			break
 		}
 	}
