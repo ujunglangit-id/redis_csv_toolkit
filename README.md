@@ -1,6 +1,6 @@
 ### simple csv toolkit
-- import shop id from csv file into redis
-- csv file is a single column contains list of Shop ID
+- import from csv file into redis concurently all at once
+- for testing purpose, csv file is a single column contains list of Shop ID
 
 ### command
 ```bash
